@@ -1,0 +1,60 @@
+#Librerías ----
+library(tidyverse)
+#Bases----
+localidad <- read.csv("01_Input/ITER_09CSV20.csv",encoding = "UTF-8") %>% as_tibble()
+names(localidad) <- tolower(names(localidad))
+#formato numérico 
+varsloc <- names(localidad[,10:ncol(localidad)])
+
+localidad <- localidad %>% 
+  mutate_at(varsloc,as.numeric)
+#Gráfico Población ----
+pobSexcdmx <- localidad %>% 
+  filter(loc==0,
+         mun!=0) %>%   
+  select(nom_mun,pobfem,pobmas) %>% 
+  pivot_longer(cols=-nom_mun,
+               names_to="variable",
+               values_to="valor") %>% 
+  mutate(sexo=ifelse(str_detect(variable,"f"),"Mujer","Hombre"),
+         sexo=factor(sexo,levels = c("Mujer","Hombre"))) %>% 
+  ggplot(aes(nom_mun,valor,fill=sexo,col=sexo))+
+  geom_col(position = "dodge",alpha=.7)+
+  tema_bw()+
+  guides(x = guide_axis(angle = 45))+
+  labs(title = "Población por Alcaldía, CDMX",
+       subtitle = "CENSO 2020",
+       x="Alcaldía",
+       y="Población")+
+  scale_color_manual(values=c("#bcbddc",
+                              "#756bb1"))+
+  scale_fill_manual(values=c("#bcbddc",
+                             "#756bb1"))+
+  theme(legend.position = "none")
+#Gráfico educación promedio ----
+educa_cdmx <- localidad %>% 
+  filter(loc==0,
+         mun!=0) %>% 
+  select(nom_mun,graproes_f,graproes_m) %>% 
+  mutate('Brecha Educativa'=graproes_m-graproes_f) %>% 
+  arrange(-(`Brecha Educativa`)) %>% 
+  pivot_longer(cols=-c(nom_mun,`Brecha Educativa`),
+               names_to="Variable",
+               values_to="valor") %>% 
+  mutate(sexo=ifelse(str_detect(Variable,"m"),"Hombre","Mujer"),
+         sexo=factor(sexo,levels = c("Mujer","Hombre"))) %>% 
+  ggplot(aes(nom_mun,valor,col=sexo,fill=sexo))+
+  geom_col(position = "dodge",alpha=.7)+
+  tema_bw()+
+  guides(x = guide_axis(angle = 45))+
+  labs(title = "Años de educación promedio por Alcaldía, CDMX",
+       subtitle = "CENSO 2020",
+       x="Alcaldía",
+       y="Población")+
+  scale_color_manual(values=c("#bcbddc",
+                              "#756bb1"))+
+  scale_fill_manual(values=c("#bcbddc",
+                             "#756bb1"))
+
+final <- cowplot::plot_grid(pobSexcdmx,
+                   educa_cdmx,ncol=1)
